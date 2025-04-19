@@ -1,58 +1,57 @@
+import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import dbConnect from '@/utils/db';
 import Course from '@/models/courseModel';
-import { parse } from 'cookie';
 
-export default async function PUT(req, res) {
-
+export async function PUT(req) {
   try {
-    const cookies = parse(req.headers.cookie || '');
-    const token = cookies.authToken;
+    const cookie = req.headers.get('cookie') || '';
+    const token = Object.fromEntries(cookie.split('; ').map(c => c.split('=')))?.authToken;
 
     if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
+      return NextResponse.json({ message: 'No token provided' }, { status: 401 });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     await dbConnect();
 
-    const { courseId, title, description } = req.body;
+    const body = await req.json();
+    const { courseId, title, description } = body;
 
     if (!courseId || (!title && !description)) {
-      return res.status(400).json({ message: 'Missing fields' });
+      return NextResponse.json({ message: 'Missing fields' }, { status: 400 });
     }
 
     const course = await Course.findById(courseId);
     if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+      return NextResponse.json({ message: 'Course not found' }, { status: 404 });
     }
 
     if (course.tutor.toString() !== decoded.userId) {
-      return res.status(403).json({ message: 'You are not authorized to edit this course' });
+      return NextResponse.json({ message: 'You are not authorized to edit this course' }, { status: 403 });
     }
 
     const updatedCourse = await Course.findByIdAndUpdate(
       courseId,
-      { 
+      {
         ...(title && { title }),
-        ...(description && { description })
+        ...(description && { description }),
       },
       { new: true }
     );
 
-    res.status(200).json({ message: 'Course updated successfully', course: updatedCourse });
+    return NextResponse.json({ message: 'Course updated successfully', course: updatedCourse });
   } catch (error) {
     console.error(error);
-    
-    // Handle specific JWT errors
+
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ message: 'Invalid token' });
+      return NextResponse.json({ message: 'Invalid token' }, { status: 401 });
     }
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token expired' });
+      return NextResponse.json({ message: 'Token expired' }, { status: 401 });
     }
 
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return NextResponse.json({ message: 'Server error', error: error.message }, { status: 500 });
   }
 }

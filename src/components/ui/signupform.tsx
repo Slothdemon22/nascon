@@ -156,10 +156,10 @@ export function SignupForm() {
                 <span>Student</span>
               </div>
             </SelectItem>
-            <SelectItem value="teacher">
+            <SelectItem value="tutor">
               <div className="flex items-center">
                 <ChalkboardTeacher className="h-4 w-4 mr-2 text-indigo-500" />
-                <span>Teacher</span>
+                <span>tutor</span>
               </div>
             </SelectItem>
             <SelectItem value="parent">

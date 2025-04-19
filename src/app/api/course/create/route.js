@@ -7,8 +7,7 @@ import { parse } from 'cookie';
 export async function POST(request) {
   try {
     // Parse cookies from request
-    const cookies = parse(request.headers.cookie || '');
-    const token = cookies.authToken;
+    const token = request.cookies.get('authToken')?.value;
     console.log('Token:', token);
     console.log("body", request.body);
 
@@ -27,7 +26,10 @@ export async function POST(request) {
 
     // Get request body data
     const { title, description, thumbnailUrl } = await request.json();
-
+    console.log(title)
+    console.log(description)
+    console.log(thumbnailUrl)
+    
     // Validate required fields
     if (!title || !description || !thumbnailUrl) {
       return NextResponse.json(
