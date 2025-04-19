@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,13 +37,33 @@ export function SignupForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
     console.log("Form submitted:", formData)
-    setIsLoading(false)
-    // Here you would typically redirect or show success message
+
+    try {
+      // Making the API call to the backend (replace with your actual API URL)
+      const response = await fetch("/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Something went wrong, please try again.")
+      }
+
+      // Handle successful response
+      console.log("Form submitted:", formData)
+      alert("Account created successfully!")
+
+    } catch (error) {
+      // Handle error response
+      console.error("Error:", error)
+      alert("Failed to create account. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

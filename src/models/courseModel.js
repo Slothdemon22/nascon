@@ -7,7 +7,7 @@ const CourseSchema = new mongoose.Schema({
   tutor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   videos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Video' }],
   enrolledStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  chatRoomId: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatRoom' },
+ 
 }, {
   timestamps: true
 });

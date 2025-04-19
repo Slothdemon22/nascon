@@ -1,38 +1,79 @@
-import dbConnect from  "@/utils/db.js";
-import User from '../../../models/userModel.js';
+import { NextResponse } from 'next/server';
+import dbConnect from '@/utils/db';
+import User from '../../../models/userModel';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
+export async function POST(request) {
   try {
     await dbConnect();
+    console.log('Connected to database');
 
-    const { email, password, name } = req.body;
+    // Get request body
+    const { email, password, name, role } = await request.json();
+    console.log('Connected to database');
 
-    // Check if user already exists
+    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return NextResponse.json(
+        { message: 'User already exists' },
+        { status: 400 }
+      );
     }
+    console.log('Connected to database');
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create new user
+    // Create user
     const user = await User.create({
       email,
       password: hashedPassword,
-      name
+      name,
+      role
     });
 
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = user.toObject();
+    // Create JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
 
-    res.status(201).json({ user: userWithoutPassword, message: 'User created successfully' });
+    // Create response
+    const response = NextResponse.json(
+      {
+        user: user.toObject({ transform: (doc, ret) => {
+          delete ret.password;
+          return ret;
+        }}),
+        message: 'User created successfully'
+      },
+      { status: 201 }
+    );
+
+    // Set secure cookie
+    response.cookies.set({
+      name: 'authToken',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 86400, // 1 day
+      path: '/',
+    });
+
+    return response;
+
   } catch (error) {
-    res.status(500).json({ message: 'Something went wrong', error: error.message });
+    console.log('Error creating user:', error);
+    return NextResponse.json(
+      {
+        message: 'Something went wrong',
+        error: error.message
+      },
+      { status: 500 }
+    );
   }
 }

@@ -7,6 +7,7 @@ if (!MONGODB_URI) throw new Error('Missing MONGODB_URI in .env.local');
 let cached = global.mongoose || { conn: null, promise: null };
 
 async function connectDB() {
+  console.log("Connecting to MongoDB...");
   if (cached.conn) return cached.conn;
 
   cached.promise = cached.promise || 
