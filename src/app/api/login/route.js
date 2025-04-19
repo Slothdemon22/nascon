@@ -1,28 +1,32 @@
-import dbConnect from '../../../utils/db.js';
-import User from '../../../models/userModel.js';
+import { NextResponse } from 'next/server';
+import dbConnect from '../../../utils/db';
+import User from '../../../models/userModel';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
+export async function POST(request) {
   try {
     await dbConnect();
 
-    const { email, password } = req.body;
+    // Get request body
+    const { email, password } = await request.json();
 
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return NextResponse.json(
+        { message: 'Invalid credentials' },
+        { status: 400 }
+      );
     }
 
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return NextResponse.json(
+        { message: 'Invalid credentials' },
+        { status: 400 }
+      );
     }
 
     // Create JWT token
@@ -32,15 +36,35 @@ export default async function handler(req, res) {
       { expiresIn: '1d' }
     );
 
-    // Return user without password and token
-    const { password: _, ...userWithoutPassword } = user.toObject();
+    // Create response
+    const response = NextResponse.json(
+      { 
+        user: user.toObject({ virtuals: true }).password, // Remove password
+        message: 'Login successful' 
+      },
+      { status: 200 }
+    );
 
-    res.status(200).json({ 
-      user: userWithoutPassword, 
-      token,
-      message: 'Login successful' 
+    // Set HTTP-only cookie
+    response.cookies.set({
+      name: 'authToken',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 86400, // 1 day in seconds
+      path: '/',
     });
+
+    return response;
+
   } catch (error) {
-    res.status(500).json({ message: 'Something went wrong', error: error.message });
+    return NextResponse.json(
+      { 
+        message: 'Something went wrong', 
+        error: error.message 
+      },
+      { status: 500 }
+    );
   }
 }
